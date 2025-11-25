@@ -29,7 +29,7 @@ locals {
       ]
       resources = ["arn:aws:kms:*:${data.aws_caller_identity.current.account_id}:key/*"]
       principals = {
-        "AWS" = tolist(data.aws_iam_roles.administrator_access.arns)
+        "AWS" = concat(tolist(data.aws_iam_roles.administrator_access.arns), ["arn:aws:iam::020127659860:role/github-actions-deploy-role-terraform"])
       }
     }
   }
