@@ -36,7 +36,10 @@ locals {
       ]
       resources = ["arn:aws:kms:*:${data.aws_caller_identity.current.account_id}:key/*"]
       principals = {
-        "AWS" = concat(tolist(data.aws_iam_roles.administrator_access.arns), ["arn:aws:iam::020127659860:role/github-actions-deploy-role-terraform"])
+        "AWS" = concat(
+          tolist(data.aws_iam_roles.administrator_access.arns),
+          ["arn:aws:iam::020127659860:role/github-actions-deploy-role-terraform"],
+        )
       }
       condition = [
         {
@@ -47,7 +50,10 @@ locals {
         {
           test     = "ArnEquals"
           variable = "aws:PrincipalArn"
-          values   = tolist(data.aws_iam_roles.administrator_access.arns)
+          values = concat(
+            tolist(data.aws_iam_roles.administrator_access.arns),
+            ["arn:aws:iam::020127659860:role/github-actions-deploy-role-terraform"],
+          )
         }
       ]
     }
