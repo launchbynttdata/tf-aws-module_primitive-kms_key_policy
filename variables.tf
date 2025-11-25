@@ -11,8 +11,12 @@ variable "policy" {
     principals = map(list(string))
     actions    = list(string)
     resources  = list(string)
+    condition = optional(list(object({
+      test     = string
+      variable = string
+      values   = list(string)
+    })))
   }))
-  default = null
 }
 
 variable "bypass_policy_lockout_safety_check" {

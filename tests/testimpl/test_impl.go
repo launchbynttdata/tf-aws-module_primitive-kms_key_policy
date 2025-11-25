@@ -3,12 +3,15 @@ package testimpl
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
+	"github.com/aws/aws-sdk-go-v2/service/kms/types"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	lcafTypes "github.com/launchbynttdata/lcaf-component-terratest/types"
 	"github.com/stretchr/testify/assert"
@@ -16,37 +19,40 @@ import (
 )
 
 const (
-failedToGetKeyPolicyMsg   = "Failed to get KMS key policy"
-failedToParseKeyPolicyMsg = "Failed to parse KMS key policy"
-policyNotNilMsg           = "Key policy should not be nil"
-statementArrayMsg         = "Policy should have at least one statement"
-statementPrincipalMsg     = "Statement should have Principal"
-expectedSid               = "EnableIAMUserPermissions"
-expectedEffect            = "Allow"
-defaultPolicyName         = "default"
+	failedToGetKeyPolicyMsg   = "Failed to get KMS key policy"
+	failedToParseKeyPolicyMsg = "Failed to parse KMS key policy"
+	policyNotNilMsg           = "Key policy should not be nil"
+	statementArrayMsg         = "Policy should have at least one statement"
+	statementPrincipalMsg     = "Statement should have Principal"
+	expectedSid               = "EnableIAMUserPermissions"
+	expectedEffect            = "Allow"
+	defaultPolicyName         = "default"
+	kmsPolicyReadTimeout      = 2 * time.Minute
+	kmsPolicyReadPollInterval = 5 * time.Second
 )
 
 func TestComposableComplete(t *testing.T, ctx lcafTypes.TestContext) {
-	kmsClient := GetAWSKMSClient(t)
-
-	// Get the policy ID output from the module
+	// Get outputs from the module
 	policyId := terraform.Output(t, ctx.TerratestTerraformOptions(), "policy_id")
+	kmsRegion := terraform.Output(t, ctx.TerratestTerraformOptions(), "kms_key_region")
+
+	kmsClient := GetAWSKMSClient(t, kmsRegion)
 
 	t.Run("TestKMSKeyPolicyOutput", func(t *testing.T) {
-testKMSKeyPolicyOutput(t, policyId)
-})
+		testKMSKeyPolicyOutput(t, policyId)
+	})
 
 	t.Run("TestKMSKeyPolicyExists", func(t *testing.T) {
-testKMSKeyPolicyExists(t, kmsClient, policyId)
-})
+		testKMSKeyPolicyExists(t, kmsClient, policyId)
+	})
 
 	t.Run("TestKMSKeyPolicyStructure", func(t *testing.T) {
-testKMSKeyPolicyStructure(t, kmsClient, policyId)
-})
+		testKMSKeyPolicyStructure(t, kmsClient, policyId)
+	})
 
 	t.Run("TestKMSKeyPolicyPermissions", func(t *testing.T) {
-testKMSKeyPolicyPermissions(t, kmsClient, policyId)
-})
+		testKMSKeyPolicyPermissions(t, kmsClient, policyId)
+	})
 }
 
 // testKMSKeyPolicyOutput verifies that the policy ID output is not empty and has the expected format
@@ -58,27 +64,19 @@ func testKMSKeyPolicyOutput(t *testing.T, policyId string) {
 
 // testKMSKeyPolicyExists verifies that the KMS key policy exists and can be retrieved
 func testKMSKeyPolicyExists(t *testing.T, kmsClient *kms.Client, keyId string) {
-	policyOutput, err := kmsClient.GetKeyPolicy(context.TODO(), &kms.GetKeyPolicyInput{
-		KeyId:      &keyId,
-		PolicyName: aws.String(defaultPolicyName),
-	})
-	require.NoError(t, err, failedToGetKeyPolicyMsg)
+	policyOutput := getKeyPolicyWithRetry(t, kmsClient, keyId)
 	require.NotNil(t, policyOutput.Policy, policyNotNilMsg)
 	assert.NotEmpty(t, *policyOutput.Policy, "Key policy should not be empty")
 }
 
 // testKMSKeyPolicyStructure verifies the basic structure of the KMS key policy
 func testKMSKeyPolicyStructure(t *testing.T, kmsClient *kms.Client, keyId string) {
-	policyOutput, err := kmsClient.GetKeyPolicy(context.TODO(), &kms.GetKeyPolicyInput{
-		KeyId:      &keyId,
-		PolicyName: aws.String(defaultPolicyName),
-	})
-	require.NoError(t, err, failedToGetKeyPolicyMsg)
+	policyOutput := getKeyPolicyWithRetry(t, kmsClient, keyId)
 	require.NotNil(t, policyOutput.Policy, policyNotNilMsg)
 
 	// Parse the key policy JSON
 	var keyPolicy map[string]interface{}
-	err = json.Unmarshal([]byte(*policyOutput.Policy), &keyPolicy)
+	err := json.Unmarshal([]byte(*policyOutput.Policy), &keyPolicy)
 	require.NoError(t, err, failedToParseKeyPolicyMsg)
 
 	// Verify basic IAM policy structure
@@ -98,16 +96,12 @@ func testKMSKeyPolicyStructure(t *testing.T, kmsClient *kms.Client, keyId string
 
 // testKMSKeyPolicyPermissions verifies the specific permissions configured in the KMS key policy
 func testKMSKeyPolicyPermissions(t *testing.T, kmsClient *kms.Client, keyId string) {
-	policyOutput, err := kmsClient.GetKeyPolicy(context.TODO(), &kms.GetKeyPolicyInput{
-		KeyId:      &keyId,
-		PolicyName: aws.String(defaultPolicyName),
-	})
-	require.NoError(t, err, failedToGetKeyPolicyMsg)
+	policyOutput := getKeyPolicyWithRetry(t, kmsClient, keyId)
 	require.NotNil(t, policyOutput.Policy, policyNotNilMsg)
 
 	// Parse the key policy JSON
 	var keyPolicy map[string]interface{}
-	err = json.Unmarshal([]byte(*policyOutput.Policy), &keyPolicy)
+	err := json.Unmarshal([]byte(*policyOutput.Policy), &keyPolicy)
 	require.NoError(t, err, failedToParseKeyPolicyMsg)
 
 	statements, ok := keyPolicy["Statement"].([]interface{})
@@ -233,13 +227,37 @@ func checkForWildcardResource(resource interface{}) bool {
 	return false
 }
 
-func GetAWSKMSClient(t *testing.T) *kms.Client {
-	awsKMSClient := kms.NewFromConfig(GetAWSConfig(t))
+func GetAWSKMSClient(t *testing.T, region string) *kms.Client {
+	awsKMSClient := kms.NewFromConfig(GetAWSConfig(t, region))
 	return awsKMSClient
 }
 
-func GetAWSConfig(t *testing.T) (cfg aws.Config) {
-	cfg, err := config.LoadDefaultConfig(context.TODO())
+func getKeyPolicyWithRetry(t *testing.T, kmsClient *kms.Client, keyId string) *kms.GetKeyPolicyOutput {
+	var policyOutput *kms.GetKeyPolicyOutput
+
+	require.Eventually(t, func() bool {
+		output, err := kmsClient.GetKeyPolicy(context.Background(), &kms.GetKeyPolicyInput{
+			KeyId:      aws.String(keyId),
+			PolicyName: aws.String(defaultPolicyName),
+		})
+		if err != nil {
+			var notFound *types.NotFoundException
+			if errors.As(err, &notFound) {
+				return false
+			}
+			require.NoError(t, err, failedToGetKeyPolicyMsg)
+			return false
+		}
+
+		policyOutput = output
+		return true
+	}, kmsPolicyReadTimeout, kmsPolicyReadPollInterval, failedToGetKeyPolicyMsg)
+
+	return policyOutput
+}
+
+func GetAWSConfig(t *testing.T, region string) (cfg aws.Config) {
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
 	require.NoError(t, err, "Unable to load AWS SDK config")
 	return cfg
 }

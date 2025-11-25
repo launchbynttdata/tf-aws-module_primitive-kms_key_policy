@@ -30,7 +30,7 @@ No modules.
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_key_id"></a> [key\_id](#input\_key\_id) | (Required) The ID of the KMS Key to attach the policy. | `string` | n/a | yes |
-| <a name="input_policy"></a> [policy](#input\_policy) | A JSON-formatted string that represents the key policy to attach to the KMS key. | <pre>map(object({<br/>    sid        = string<br/>    effect     = string<br/>    principals = map(list(string))<br/>    actions    = list(string)<br/>    resources  = list(string)<br/>  }))</pre> | `null` | no |
+| <a name="input_policy"></a> [policy](#input\_policy) | A JSON-formatted string that represents the key policy to attach to the KMS key. | <pre>map(object({<br/>    sid        = string<br/>    effect     = string<br/>    principals = map(list(string))<br/>    actions    = list(string)<br/>    resources  = list(string)<br/>    condition = optional(list(object({<br/>      test     = string<br/>      variable = string<br/>      values   = list(string)<br/>    })))<br/>  }))</pre> | n/a | yes |
 | <a name="input_bypass_policy_lockout_safety_check"></a> [bypass\_policy\_lockout\_safety\_check](#input\_bypass\_policy\_lockout\_safety\_check) | (Optional) A boolean flag to indicate whether to bypass the KMS key policy lockout safety check. Defaults to false. | `bool` | `false` | no |
 
 ## Outputs
