@@ -20,6 +20,13 @@ locals {
       principals = {
         "AWS" = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
       }
+      condition = [
+        {
+          test     = "ArnEquals"
+          variable = "aws:PrincipalArn"
+          values   = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+        }
+      ]
     }
     "AllowAccountKeyManagement" = {
       sid    = "AllowAccountKeyManagement"
@@ -34,6 +41,21 @@ locals {
           ["arn:aws:iam::020127659860:role/github-actions-deploy-role-terraform"],
         )
       }
+      condition = [
+        {
+          test     = "StringEquals"
+          variable = "aws:PrincipalAccount"
+          values   = [data.aws_caller_identity.current.account_id]
+        },
+        {
+          test     = "ArnEquals"
+          variable = "aws:PrincipalArn"
+          values = concat(
+            tolist(data.aws_iam_roles.administrator_access.arns),
+            ["arn:aws:iam::020127659860:role/github-actions-deploy-role-terraform"],
+          )
+        }
+      ]
     }
   }
 }
@@ -46,7 +68,7 @@ module "kms_key" {
   key_usage               = "ENCRYPT_DECRYPT"
   enable_key_rotation     = true
   rotation_period_in_days = 365
-  multi_region            = false
+  multi_region            = true
   deletion_window_in_days = 7
   tags = {
     "Environment" = "Test"
