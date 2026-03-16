@@ -13,9 +13,8 @@ locals {
   ]))
 }
 
+# Always create exactly one instance so count does not depend on unknown var.policy (e.g. from another resource).
 data "aws_iam_policy_document" "kms_policy" {
-  count = local.policy_input_is_statement_map ? 1 : 0
-
   dynamic "statement" {
     for_each = local.policy_input_is_statement_map ? var.policy : {}
     content {
@@ -43,7 +42,7 @@ data "aws_iam_policy_document" "kms_policy" {
 }
 
 locals {
-  policy_json = local.policy_input_is_document ? var.policy.json : local.policy_input_is_statement_map ? data.aws_iam_policy_document.kms_policy[0].json : local.policy_input_string_value
+  policy_json = local.policy_input_is_document ? var.policy.json : local.policy_input_is_statement_map ? data.aws_iam_policy_document.kms_policy.json : local.policy_input_string_value
 }
 
 resource "aws_kms_key_policy" "this" {
