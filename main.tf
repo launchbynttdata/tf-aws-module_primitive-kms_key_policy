@@ -13,25 +13,24 @@ locals {
   ]))
 }
 
+# Always create exactly one instance so count does not depend on unknown var.policy (e.g. from another resource).
 data "aws_iam_policy_document" "kms_policy" {
-  count = local.policy_input_is_statement_map ? 1 : 0
-
   dynamic "statement" {
-    for_each = local.policy_input_is_statement_map ? var.policy : {}
+    for_each = local.policy_input_is_statement_map ? toset(keys(var.policy)) : toset([])
     content {
-      sid       = statement.value.sid
-      effect    = statement.value.effect
-      actions   = statement.value.actions
-      resources = statement.value.resources
+      sid       = var.policy[statement.key].sid
+      effect    = var.policy[statement.key].effect
+      actions   = var.policy[statement.key].actions
+      resources = var.policy[statement.key].resources
       dynamic "principals" {
-        for_each = statement.value.principals
+        for_each = var.policy[statement.key].principals
         content {
           type        = principals.key
           identifiers = principals.value
         }
       }
       dynamic "condition" {
-        for_each = toset(lookup(statement.value, "condition", []))
+        for_each = toset(lookup(var.policy[statement.key], "condition", []))
         content {
           test     = condition.value.test
           variable = condition.value.variable
@@ -43,7 +42,7 @@ data "aws_iam_policy_document" "kms_policy" {
 }
 
 locals {
-  policy_json = local.policy_input_is_document ? var.policy.json : local.policy_input_is_statement_map ? data.aws_iam_policy_document.kms_policy[0].json : local.policy_input_string_value
+  policy_json = local.policy_input_is_document ? var.policy.json : local.policy_input_is_statement_map ? data.aws_iam_policy_document.kms_policy.json : local.policy_input_string_value
 }
 
 resource "aws_kms_key_policy" "this" {
