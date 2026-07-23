@@ -31,7 +31,22 @@ const (
 	kmsPolicyReadPollInterval = 5 * time.Second
 )
 
-func TestComposableComplete(t *testing.T, ctx lcafTypes.TestContext) {
+// TestKMSKeyPolicyComplete is the functional entrypoint's implementation
+// function, run via lib.RunSetupTestTeardown (apply -> test -> destroy).
+func TestKMSKeyPolicyComplete(t *testing.T, ctx lcafTypes.TestContext) {
+	runKMSKeyPolicyChecks(t, ctx)
+}
+
+// TestComposableCompleteReadOnly is the readonly entrypoint's implementation
+// function. lcaf-component-terratest requires readonly implementation
+// functions to be named with a TestComposable prefix, and it is run via
+// lib.RunNonDestructiveTest against already-deployed infrastructure. It
+// performs the same read-only assertions as the functional suite.
+func TestComposableCompleteReadOnly(t *testing.T, ctx lcafTypes.TestContext) {
+	runKMSKeyPolicyChecks(t, ctx)
+}
+
+func runKMSKeyPolicyChecks(t *testing.T, ctx lcafTypes.TestContext) {
 	// Get outputs from the module
 	policyId := terraform.Output(t, ctx.TerratestTerraformOptions(), "policy_id")
 	kmsRegion := terraform.Output(t, ctx.TerratestTerraformOptions(), "kms_key_region")
