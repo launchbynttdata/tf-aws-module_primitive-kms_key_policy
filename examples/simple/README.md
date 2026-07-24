@@ -8,12 +8,6 @@
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | ~> 1.5 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 5.0 |
 
-## Providers
-
-| Name | Version |
-|------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.100.0 |
-
 ## Modules
 
 | Name | Source | Version |
@@ -39,8 +33,8 @@
 
 | Name | Description |
 |------|-------------|
-| <a name="output_policy_id"></a> [policy\_id](#output\_policy\_id) | The ID of the KMS Key Policy resource. |
-| <a name="output_kms_key_region"></a> [kms\_key\_region](#output\_kms\_key\_region) | Region where the KMS key and policy are managed. |
-| <a name="output_key_id"></a> [key\_id](#output\_key\_id) | The ID of the KMS Key associated with the policy. |
 | <a name="output_key_arn"></a> [key\_arn](#output\_key\_arn) | The ARN of the KMS Key associated with the policy. |
+| <a name="output_key_id"></a> [key\_id](#output\_key\_id) | The ID of the KMS Key associated with the policy. |
+| <a name="output_kms_key_region"></a> [kms\_key\_region](#output\_kms\_key\_region) | Region where the KMS key and policy are managed. |
+| <a name="output_policy_id"></a> [policy\_id](#output\_policy\_id) | The ID of the KMS Key Policy resource. |
 <!-- END_TF_DOCS -->

@@ -8,12 +8,6 @@
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | ~> 1.5 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 5.0 |
 
-## Providers
-
-| Name | Version |
-|------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.100.0 |
-
 ## Modules
 
 No modules.
@@ -29,9 +23,9 @@ No modules.
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
+| <a name="input_bypass_policy_lockout_safety_check"></a> [bypass\_policy\_lockout\_safety\_check](#input\_bypass\_policy\_lockout\_safety\_check) | (Optional) A boolean flag to indicate whether to bypass the KMS key policy lockout safety check. Defaults to false. | `bool` | `false` | no |
 | <a name="input_key_id"></a> [key\_id](#input\_key\_id) | (Required) The ID of the KMS Key to attach the policy. | `string` | n/a | yes |
 | <a name="input_policy"></a> [policy](#input\_policy) | Accepts one of the following:<br/>1. A map of statements (the legacy behaviour of this module) where each entry contains sid, effect, principals, actions, resources, and optional condition blocks.<br/>2. An aws\_iam\_policy\_document data source (the object itself) so the module can reuse its rendered JSON.<br/>3. A raw JSON string that should be attached to the KMS key as-is. | `any` | n/a | yes |
-| <a name="input_bypass_policy_lockout_safety_check"></a> [bypass\_policy\_lockout\_safety\_check](#input\_bypass\_policy\_lockout\_safety\_check) | (Optional) A boolean flag to indicate whether to bypass the KMS key policy lockout safety check. Defaults to false. | `bool` | `false` | no |
 
 ## Outputs
 
