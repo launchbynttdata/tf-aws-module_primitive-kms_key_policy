@@ -48,8 +48,8 @@ func TestComposableCompleteReadOnly(t *testing.T, ctx lcafTypes.TestContext) {
 
 func runKMSKeyPolicyChecks(t *testing.T, ctx lcafTypes.TestContext) {
 	// Get outputs from the module
-	policyId := terraform.Output(t, ctx.TerratestTerraformOptions(), "policy_id")
-	kmsRegion := terraform.Output(t, ctx.TerratestTerraformOptions(), "kms_key_region")
+	policyId := terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "policy_id")
+	kmsRegion := terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "kms_key_region")
 
 	kmsClient := GetAWSKMSClient(t, kmsRegion)
 
